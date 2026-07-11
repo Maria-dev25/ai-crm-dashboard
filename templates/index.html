@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI CRM Dashboard</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 border-b border-gray-700 pb-4">
+            <h1 class="text-3xl font-bold text-indigo-400">AI-Powered Analytics CRM</h1>
+            <p class="text-gray-400 text-sm">Python Flask Local Development Server</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Form Card -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700 h-fit">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-300">Capture New Lead</h2>
+                <form id="leadForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Name</label>
+                        <input type="text" id="name" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Email</label>
+                        <input type="email" id="email" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Inquiry Message</label>
+                        <textarea id="message" rows="4" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-indigo-500"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 font-semibold py-2 rounded transition-colors duration-200">Submit to Pipeline</button>
+                </form>
+                <div id="statusMessage" class="mt-4 text-sm font-semibold text-center min-h-[20px]"></div>
+            </div>
+
+            <!-- Terminal Feed Display -->
+            <div class="md:col-span-2 bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-300">Pipeline Terminal Logs</h2>
+                <div id="logsContainer" class="bg-black p-4 rounded font-mono text-sm text-green-400 h-64 overflow-y-auto space-y-2">
+                    <p class="text-gray-500">&gt; System initialized. Waiting for pipeline submission...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('leadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('statusMessage');
+            const logsContainer = document.getElementById('logsContainer');
+            
+            const payload = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                message: document.getElementById('message').value
+            };
+
+            try {
+                const res = await fetch('/api/leads', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    statusDiv.textContent = data.message;
+                    statusDiv.style.color = "#4ade80"
+                    
+                    // Inject a fake live simulation terminal feed log item
+                    const timestamp = new Date().toLocaleTimeString();
+                    logsContainer.innerHTML += `<p class="text-green-400">[${timestamp}] SUCCESS: Processed lead for ${payload.name} (${payload.email})</p>`;
+                    
+                    document.getElementById('leadForm').reset();
+                } else {
+                    statusDiv.textContent = data.error || "Submission error";
+                    statusDiv.className = "mt-4 text-sm font-semibold text-center text-red-400 block";
+                }
+            } catch (err) {
+                statusDiv.textContent = "Cannot connect to Flask server.";
+                statusDiv.className = "mt-4 text-sm font-semibold text-center text-red-400 block";
+            }
+        });
+    </script>
+</body>
+</html>
