@@ -43,48 +43,113 @@
                     <p class="text-gray-500">&gt; System initialized. Waiting for pipeline submission...</p>
                 </div>
             </div>
+     <!-- Live Records Table View Container -->
+    <div class="mt-8 bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
+             <h2 class="text-xl font-semibold mb-4 text-indigo-300">Database Viewer </h2>
+       <div class="overflow-x-auto">
+           <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr class="border-b border-gray-700 bg-gray-700 text-gray-300">
+                    <th class="p-3">ID</th>
+                    <th class="p-3">Name</th>
+                    <th class="p-3">Email</th>
+                    <th class="p-3">Message</th>
+                    <th class="p-3">Sentiment</th>
+                  </tr>
+                </thead>
+                 <tbody id="leadsTableBody" class="divide-y divide-gray-700">
+                  <!-- Database rows will inject here automatically -->
+                </tbody>
+            </table>
         </div>
-    </div>
+        
+         <div>
+     </div>
+   </div>
 
     <script>
-        document.getElementById('leadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const statusDiv = document.getElementById('statusMessage');
-            const logsContainer = document.getElementById('logsContainer');
+       
+    // --- FEATURE 1: GETS DATA FROM MYSQL AND SHOWS IT IN THE TABLE ---
+    async function renderDatabaseView() {
+        try {
+            const res = await fetch('/api/leads');
+        
+            if (!res.ok) 
+                throw new Error("Backend query failed");
             
-            const payload = {
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                message: document.getElementById('message').value
-            };
+            
+            const leads = await res.json();
+            const tbody = document.getElementById('leadsTableBody');
+            
+            if (!tbody) return;
 
-            try {
-                const res = await fetch('/api/leads', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+            // Clear old entries and loop through rows
+            tbody.innerHTML = leads.length === 0 ? '<tr><td colspan="5" class="p-3 text-center text-gray-500">No records found inside MySQL database.</td></tr>' : '';
+            
+            leads.forEach(lead => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-700 transition-colors border-b border-gray-700">
+                        <td class="p-3 text-indigo-400 font-mono">${lead.id}</td>
+                        <td class="p-3 font-semibold text-white">${lead.name}</td>
+                        <td class="p-3 text-gray-400">${lead.email}</td>
+                        <td class="p-3 text-gray-300">${lead.message}</td>
+                        <td class="p-3"><span class="text-xs px-2 py-1 rounded bg-indigo-900 text-indigo-200">${lead.sentiment}</span></td>
+                    </tr>
+                `;
+            });
+        } catch (err) {
+            console.error("Error executing dynamic view fetch:", err);
+        }
+    }
 
-                const data = await res.json();
+    // --- FEATURE 2: SENDS THE DATA FROM THE FORM TO PYTHON ---
+    document.getElementById('leadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const statusDiv = document.getElementById('statusMessage');
+        const logsContainer = document.getElementById('logsContainer');
+        
+        const payload = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            message: document.getElementById('message').value
+        };
 
-                if (res.ok) {
-                    statusDiv.textContent = data.message;
-                    statusDiv.style.color = "#4ade80"
-                    
-                    // Inject a fake live simulation terminal feed log item
-                    const timestamp = new Date().toLocaleTimeString();
-                    logsContainer.innerHTML += `<p class="text-green-400">[${timestamp}] SUCCESS: Processed lead for ${payload.name} (${payload.email})</p>`;
-                    
-                    document.getElementById('leadForm').reset();
-                } else {
-                    statusDiv.textContent = data.error || "Submission error";
-                    statusDiv.className = "mt-4 text-sm font-semibold text-center text-red-400 block";
-                }
-            } catch (err) {
-                statusDiv.textContent = "Cannot connect to Flask server.";
-                statusDiv.className = "mt-4 text-sm font-semibold text-center text-red-400 block";
+        try {
+            const res = await fetch('/api/leads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                // Show green confirmation text
+                statusDiv.textContent = data.message;
+                statusDiv.style.color = "#4ade80"; 
+                
+                // Add a text line to the black terminal box
+                const timestamp = new Date().toLocaleTimeString();
+                logsContainer.innerHTML += `<p class="text-green-400">[${timestamp}] SUCCESS: Processed lead for ${payload.name}</p>`;
+                
+                document.getElementById('leadForm').reset();
+                
+                // REFRESH THE LIVE TABLE VIEW IMMEDIATELY
+                renderDatabaseView();
             }
-        });
-    </script>
+             else {
+                statusDiv.textContent = data.error || "Submission error";
+                statusDiv.style.color = "#f87171";
+            }
+        } catch (err) {
+            statusDiv.textContent = "Cannot connect to Flask server.";
+            statusDiv.style.color = "#f87171";
+        }
+    });
+
+    // --- FEATURE 3: LOADS EXISTING RECORDS AUTOMATICALLY WHEN PAGE OPENS ---
+    renderDatabaseView();
+</script>
 </body>
 </html>
+       
