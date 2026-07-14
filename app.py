@@ -18,7 +18,7 @@ def get_db_connection():
 @app.route('/')
 def index():
     return render_template('index.html')
-
+# Adding an alternative route array ensures flask never 404s on this path
 @app.route('/api/leads', methods=['POST'])
 @app.route('/api/leads/', methods=['POST'])
 def add_lead():
@@ -43,6 +43,15 @@ def add_lead():
     conn.close()
 
     return jsonify({"status": "success", "message": "Pipeline validation clear!"}), 201
-
+@app.route('/api/leads',methods=['GET'])
+def get_leads():
+    conn=get_db_connection()
+    cursor =conn.cursor(dictionary=True)
+    cursor.execute( "SELECT * FROM leads ORDER BY created_at DESC")
+    leads= cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(leads)
+    
 if __name__ == '__main__':
     app.run(debug=True)
